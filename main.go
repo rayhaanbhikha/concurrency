@@ -1,62 +1,45 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"sync"
+	"log"
+	"os"
+	"strings"
 	"time"
 )
 
+func delay(ms int) {
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
-	numbers := make(chan int, 100)
-	squares := make(chan int, 100)
-	errors := make(chan error, 100)
+	start := time.Now()
+	file, err := os.Open("./names.txt")
+	checkErr(err)
 
-	for i := 1; i <= 100; i++ {
-		numbers <- i
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		name := scanner.Text()
+		cName := capitalise(name)
+		print(cName)
 	}
-	close(numbers)
-	// =============================================
-	var wg sync.WaitGroup
 
-	for num := range numbers {
-		wg.Add(1)
-		go func(num int) {
-			defer wg.Done()
-			result, err := square(num)
-			if err != nil {
-				errors <- err
-			}
-			squares <- result
-		}(num)
-	}
-	wg.Wait()
-
-	// =============================================
-	runSelect := true
-	for runSelect {
-		select {
-		case res := <-squares:
-			fmt.Println(res)
-		case err := <-errors:
-			fmt.Println(err)
-		default:
-			fmt.Println("finished")
-			runSelect = false
-		}
-	}
-	fmt.Println("hi")
+	fmt.Println(time.Since(start))
 }
 
-func worker(numbers, results chan int) {
-	for number := range numbers {
-		results <- number
-	}
+func capitalise(name string) string {
+	delay(2e3)
+	return strings.ToUpper(name)
 }
 
-func square(num int) (int, error) {
-	time.Sleep(time.Millisecond * 500)
-	if num%5 == 0 {
-		return 0, fmt.Errorf("some error %d", num)
-	}
-	return num * num, nil
+func print(name string) {
+	delay(1e3)
+	fmt.Println("hello this is ----->>>>  ", name)
 }
