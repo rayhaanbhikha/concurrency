@@ -23,31 +23,9 @@ func main() {
 	start := time.Now()
 	quit := make(chan int)
 	names := names("./names.txt")
-	cNames := make(chan string)
 
-	go func() {
-		defer close(cNames)
-		for {
-			name, ok := <-names
-			if !ok {
-				return
-			}
-			cname := capitalise(name)
-			fmt.Println("capitalised -> ", cname)
-			cNames <- cname
-
-		}
-	}()
-
-	go func() {
-		for {
-			name, ok := <-cNames
-			if !ok {
-				quit <- 1
-			}
-			print(name)
-		}
-	}()
+	capitalisedNames := cCapitalise(names)
+	cPrint(capitalisedNames, quit)
 
 	<-quit
 
@@ -67,6 +45,28 @@ func names(fileName string) <-chan string {
 		close(names)
 	}()
 	return names
+}
+
+func cCapitalise(names <-chan string) <-chan string {
+	capitalisedNames := make(chan string)
+	go func() {
+		for name := range names {
+			cname := capitalise(name)
+			fmt.Println("capitalised -> ", cname)
+			capitalisedNames <- cname
+		}
+		close(capitalisedNames)
+	}()
+	return capitalisedNames
+}
+
+func cPrint(cNames <-chan string, quit chan<- int) {
+	go func() {
+		for name := range cNames {
+			print(name)
+		}
+		quit <- 1
+	}()
 }
 
 func capitalise(name string) string {
