@@ -35,30 +35,31 @@ func main() {
 	fmt.Println(time.Since(start))
 }
 
-func merge(cs ...<-chan string) <-chan string {
+func merge(inputChans ...<-chan string) <-chan string {
 	var wg sync.WaitGroup
-	out := make(chan string)
+	outputChan := make(chan string)
 
-	// Start an output goroutine for each input channel in cs.  output
-	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(c <-chan string) {
-		for n := range c {
-			out <- n
+	// go routine func to copy val from inputChan to outputChan
+	output := func(inputChan <-chan string) {
+		for input := range inputChan {
+			outputChan <- input
 		}
 		wg.Done()
 	}
-	wg.Add(len(cs))
-	for _, c := range cs {
-		go output(c)
+
+	// add wait group equal to number of chans. Create go routine per inputChan
+	wg.Add(len(inputChans))
+	for _, inputChan := range inputChans {
+		go output(inputChan)
 	}
 
-	// Start a goroutine to close out once all the output goroutines are
-	// done.  This must start after the wg.Add call.
+	// go routine to close outputChan once all inputChans have been merged.
 	go func() {
 		wg.Wait()
-		close(out)
+		close(outputChan)
 	}()
-	return out
+
+	return outputChan
 }
 
 func names(fileName string) <-chan string {
