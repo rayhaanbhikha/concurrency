@@ -21,17 +21,52 @@ func checkErr(err error) {
 
 func main() {
 	start := time.Now()
-	file, err := os.Open("./names.txt")
-	checkErr(err)
+	quit := make(chan int)
+	names := names("./names.txt")
+	cNames := make(chan string)
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		name := scanner.Text()
-		cName := capitalise(name)
-		print(cName)
-	}
+	go func() {
+		defer close(cNames)
+		for {
+			name, ok := <-names
+			if !ok {
+				return
+			}
+			cname := capitalise(name)
+			fmt.Println("capitalised -> ", cname)
+			cNames <- cname
+
+		}
+	}()
+
+	go func() {
+		for {
+			name, ok := <-cNames
+			if !ok {
+				quit <- 1
+			}
+			print(name)
+		}
+	}()
+
+	<-quit
 
 	fmt.Println(time.Since(start))
+}
+
+func names(fileName string) <-chan string {
+	file, err := os.Open(fileName)
+	checkErr(err)
+	names := make(chan string)
+	scanner := bufio.NewScanner(file)
+
+	go func() {
+		for scanner.Scan() {
+			names <- scanner.Text()
+		}
+		close(names)
+	}()
+	return names
 }
 
 func capitalise(name string) string {
@@ -40,6 +75,6 @@ func capitalise(name string) string {
 }
 
 func print(name string) {
-	delay(1e3)
+	delay(3e3)
 	fmt.Println("hello this is ----->>>>  ", name)
 }
