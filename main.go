@@ -21,13 +21,10 @@ func checkErr(err error) {
 
 func main() {
 	start := time.Now()
-	quit := make(chan int)
+
 	names := names("./names.txt")
-
-	capitalisedNames := cCapitalise(names)
-	cPrint(capitalisedNames, quit)
-
-	<-quit
+	capitalisedNames := capitalise(names)
+	writeToFile("f-names.txt", capitalisedNames)
 
 	fmt.Println(time.Since(start))
 }
@@ -47,34 +44,27 @@ func names(fileName string) <-chan string {
 	return names
 }
 
-func cCapitalise(names <-chan string) <-chan string {
+func capitalise(names <-chan string) <-chan string {
 	capitalisedNames := make(chan string)
 	go func() {
 		for name := range names {
-			cname := capitalise(name)
-			fmt.Println("capitalised -> ", cname)
-			capitalisedNames <- cname
+			delay(2e3)
+			capitalisedNames <- strings.ToUpper(name)
 		}
 		close(capitalisedNames)
 	}()
 	return capitalisedNames
 }
 
-func cPrint(cNames <-chan string, quit chan<- int) {
-	go func() {
-		for name := range cNames {
-			print(name)
-		}
-		quit <- 1
-	}()
-}
+func writeToFile(fileName string, capitalisedNames <-chan string) {
+	file, err := os.Create(fileName)
+	checkErr(err)
+	defer file.Close()
+	buffWriter := bufio.NewWriter(file)
 
-func capitalise(name string) string {
-	delay(2e3)
-	return strings.ToUpper(name)
-}
-
-func print(name string) {
-	delay(3e3)
-	fmt.Println("hello this is ----->>>>  ", name)
+	for name := range capitalisedNames {
+		delay(3e3)
+		buffWriter.WriteString(fmt.Sprintf("%s\n", name))
+	}
+	buffWriter.Flush()
 }
