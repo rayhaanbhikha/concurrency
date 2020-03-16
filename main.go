@@ -41,10 +41,10 @@ func merge(inputChans ...<-chan string) <-chan string {
 
 	// go routine func to copy val from inputChan to outputChan
 	output := func(inputChan <-chan string) {
+		defer wg.Done()
 		for input := range inputChan {
 			outputChan <- input
 		}
-		wg.Done()
 	}
 
 	// add wait group equal to number of chans. Create go routine per inputChan
